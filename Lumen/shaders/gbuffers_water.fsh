@@ -21,10 +21,14 @@ void main() {
     // the highlights follow the same surface rather than a repeating grid.
     vec2 p = worldpos.xz;
     float t = frameTimeCounter;
-    float h = waterHeight(p, t);
+    // Fade only the small ripples when a pixel covers a large area of water.
+    // Larger swells stay animated at a distance instead of aliasing into stripes.
+    float footprint = max(length(dFdx(p)), length(dFdy(p)));
+    float fineDetail = 1.0 - smoothstep(0.6, 3.0, footprint);
+    float h = waterHeight(p, t, fineDetail);
     float epsilon = 0.08;
-    vec2 wave = vec2(waterHeight(p+vec2(epsilon,0.0),t)-h,
-                     waterHeight(p+vec2(0.0,epsilon),t)-h) / epsilon;
+    vec2 wave = vec2(waterHeight(p+vec2(epsilon,0.0),t,fineDetail)-h,
+                     waterHeight(p+vec2(0.0,epsilon),t,fineDetail)-h) / epsilon;
     vec3 worldNormal = normalize(mat3(gbufferModelViewInverse) * normal);
     float topSurface = smoothstep(0.4, 0.9, worldNormal.y);
     float distanceFade = mix(1.0, 0.5, smoothstep(70.0, 180.0, length(worldpos-cameraPosition)));

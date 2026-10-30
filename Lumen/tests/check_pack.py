@@ -53,7 +53,7 @@ if validator:
     with tempfile.TemporaryDirectory(prefix="lumen-glsl-") as tmp:
         for vert in sorted(root.rglob("*.vsh")):
             frag = vert.with_suffix(".fsh")
-            for profile in ("default", "low", "experimental", "water_effects_off"):
+            for profile in ("default", "low", "experimental", "water_effects_off", "small_sun", "large_sun"):
                 stages = []
                 for path, suffix in ((vert, ".vert"), (frag, ".frag")):
                     source = expand(path)
@@ -62,6 +62,9 @@ if validator:
                             source = re.sub(rf'^#define {option}\s*$', f'// #define {option}', source, flags=re.M)
                     if profile == "water_effects_off":
                         source = re.sub(r'^#define WATER_EFFECTS\s*$', '// #define WATER_EFFECTS', source, flags=re.M)
+                    if profile in ("small_sun", "large_sun"):
+                        size = "1.0" if profile == "small_sun" else "5.0"
+                        source = re.sub(r'^#define SUN_SIZE [^\s]+', f'#define SUN_SIZE {size}', source, flags=re.M)
                     if profile == "experimental":
                         for option in ("LAB_PBR", "TONEMAP_AGX", "AUTO_EXPOSURE"):
                             source = re.sub(rf'^//#define {option}\s*$', f'#define {option}', source, flags=re.M)
@@ -70,6 +73,6 @@ if validator:
                     stages.append(str(dest))
                 result = subprocess.run([validator, '-l', *stages], capture_output=True, text=True)
                 assert result.returncode == 0, f"{vert} ({profile}):\n{result.stdout}\n{result.stderr}"
-    print("GLSL compilation and linking passed for default, LOW, experimental and water-effects-off variants.")
+    print("GLSL compilation and linking passed for default, LOW, experimental, water-effects-off and sun-size variants.")
 else:
     print("glslang unavailable; shader compilation and linking skipped.")

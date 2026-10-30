@@ -10,14 +10,17 @@ float waterNoise(vec2 p) {
                mix(waterHash(cell+vec2(0.0,1.0)), waterHash(cell+vec2(1.0,1.0)), w.x), w.y);
 }
 // Smooth, moving multi-scale surface; gradients of this height shape the normal.
-float waterHeight(vec2 p, float t) {
+float waterHeight(vec2 p, float t, float fineDetail) {
     t *= WAVE_SPEED;
     vec2 warp = vec2(waterNoise(p*0.13+vec2(t*0.025,0.0)),
                      waterNoise(p*0.13+vec2(7.1,-t*0.021))) - 0.5;
     p += warp * 1.6;
-    float swell = sin(dot(p, vec2(0.34,0.18)) + t*0.52)*0.17;
-    swell += sin(dot(p, vec2(-0.22,0.41)) - t*0.37)*0.11;
-    float ripples = waterNoise(p*0.75 + vec2(t*0.12,-t*0.08));
-    ripples += waterNoise(p*1.17 + vec2(-t*0.08,t*0.11))*0.45;
-    return swell + ripples*0.12;
+    // Broad, crossed swells with a slowly wandering phase give the surface a
+    // coherent direction without the evenly spaced rows of a single sine wave.
+    float swell = sin(dot(p, vec2(0.22,0.12)) + t*0.38)*0.19;
+    swell += sin(dot(p, vec2(-0.17,0.29)) - t*0.32)*0.12;
+    swell += sin(dot(p, vec2(0.41,-0.18)) + t*0.47)*0.055;
+    float ripples = waterNoise(p*0.65 + vec2(t*0.12,-t*0.08)) - 0.5;
+    ripples += (waterNoise(p*1.05 + vec2(-t*0.08,t*0.11))-0.5)*0.35;
+    return swell + ripples*0.075*clamp(fineDetail,0.0,1.0);
 }

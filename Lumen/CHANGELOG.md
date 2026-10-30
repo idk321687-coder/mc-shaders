@@ -1,6 +1,11 @@
 # Changelog
 
 ## In progress
+- Added an adjustable, larger sun disk and a warm corona; the reflected sun mask tracks
+  its size. Reshaped the water into broad crossed swells and reduced high-frequency ripple
+  detail with pixel footprint to limit distant striping while keeping waves animated.
+- Reduced the painted-looking wave brightness modulation in top-down views. These changes
+  have shader compiler coverage but have not been visually tested in Minecraft.
 - Added animated, world-space surface shading for top-down water views and increased wave
   normal strength so motion is visible beyond reflections. Added a Wave Speed slider and
   increased the baseline reflection strength. In-game visual validation remains needed.

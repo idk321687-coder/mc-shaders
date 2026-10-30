@@ -1,5 +1,12 @@
 uniform int moonPhase;
 float skyHash(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+// SUN_SIZE=1 corresponds to an approximately 0.53-degree solar diameter.
+float sunDiskMask(float sunDot) {
+    float radius = 0.00465 * SUN_SIZE;
+    float center = 1.0 - 0.5 * radius * radius;
+    float edge = max(0.0000003, radius * radius * 0.045);
+    return smoothstep(center-edge, center+edge, sunDot);
+}
 vec3 skyColor(vec3 ray, vec3 sunDir, float rain, float time) {
     float day = smoothstep(-0.12, 0.12, sunDir.y);
     float horizon = pow(1.0 - abs(ray.y), 3.0);
@@ -11,7 +18,7 @@ vec3 skyColor(vec3 ray, vec3 sunDir, float rain, float time) {
     float sunDot = max(dot(ray, sunDir), 0.0);
     vec3 moonDir = -sunDir;
     float moonDot = max(dot(ray, moonDir), 0.0);
-    float sunDisc = smoothstep(0.999988, 0.999991, sunDot);
+    float sunDisc = sunDiskMask(sunDot);
     color += vec3(3.5, 2.8, 2.0) * sunDisc * day * (1.0-rain);
     // Local disk coordinates; the eight vanilla phase indices control the terminator.
     vec3 right = normalize(cross(moonDir, vec3(0.0, 0.0, 1.0)) + vec3(0.00001, 0.0, 0.0));
@@ -28,6 +35,8 @@ vec3 skyColor(vec3 ray, vec3 sunDir, float rain, float time) {
     float starSeed = skyHash(cell);
     float star = step(0.9975, starSeed) * pow(max(0.0, 1.0-length(fract(ray*650.0)-0.5)*2.0), 3.0);
     color += vec3(0.75, 0.82, 1.0) * star * (0.6+0.4*sin(time*1.7+starSeed*900.0)) * (1.0-day) * (1.0-moonDisc) * (1.0-rain);
+    // A warm, broad atmospheric corona around the brighter solar disk.
     color += vec3(0.65, 0.35, 0.16) * pow(sunDot, 128.0) * day * (1.0-rain) * 0.35;
+    color += vec3(0.8, 0.55, 0.3) * pow(sunDot, 1200.0 / SUN_SIZE) * day * (1.0-rain) * 0.18;
     return mix(color, vec3(dot(color, vec3(0.299,0.587,0.114))) * 0.65, rain * 0.7);
 }

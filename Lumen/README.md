@@ -10,7 +10,9 @@ production-tested pack** in `../SHADER_PROMPT.md`.
    contents so `shaders/` is at the root of the zip.
 3. Select Lumen in Video Settings → Shaders. Shader options include LOW, MEDIUM,
    HIGH and ULTRA profiles plus atmosphere, water, wind and color controls.
-   Under Water, use Wave Strength, Wave Speed and Reflection Strength to adjust the surface. If you
+   Under Water, use Wave Strength, Wave Speed and Reflection Strength to adjust the surface.
+   Under Atmosphere, use Sun Size to adjust the disk. The default is intentionally larger
+   than the real sun; choose 1.0 for its approximate real-world angular diameter. If you
    upgraded from an older Lumen ZIP, reset shader options to use the new defaults.
 
 ## Implemented so far
@@ -36,7 +38,7 @@ Shadows do not yet extend to all passes.
 
 ## Status and limitations
 
-The shader entry points were compiled and linked with glslang for default, LOW, experimental and water-effects-off feature
+The shader entry points were compiled and linked with glslang for default, LOW, experimental, water-effects-off and sun-size feature
 variants, after expanding loader includes. The pack
 has not been run in Minecraft: loader compatibility, buffer blending, performance and
 appearance must all be verified in-game. The implementation uses GLSL 120 compatibility built-ins rather than

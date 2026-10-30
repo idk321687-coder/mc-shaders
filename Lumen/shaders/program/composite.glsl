@@ -78,8 +78,10 @@ void main() {
         vec3 flatUp = normalize(mat3(gbufferModelView) * vec3(0.0,1.0,0.0));
         float upward = smoothstep(0.35, 0.8, dot(waterNormal, flatUp));
         float topDown = smoothstep(0.15, 0.9, abs(dot(normalize(pos), flatUp)));
-        float crest = clamp((waterHeight(waterWorld.xz, frameTimeCounter) - 0.08)*2.4, -0.6, 0.6);
-        float detail = clamp(WAVE_STRENGTH, 0.0, 1.5) * upward * mix(0.20, 0.60, topDown);
+        float footprint = max(length(dFdx(waterWorld.xz)), length(dFdy(waterWorld.xz)));
+        float fineDetail = 1.0 - smoothstep(0.6, 3.0, footprint);
+        float crest = clamp(waterHeight(waterWorld.xz, frameTimeCounter, fineDetail)*2.0, -0.6, 0.6);
+        float detail = clamp(WAVE_STRENGTH, 0.0, 1.5) * upward * mix(0.10, 0.32, topDown);
         scene *= max(0.0, 1.0 + crest * detail);
         // Broken, animated foam follows world-space shoreline intersections.
         float foamNoise = waterNoise(waterWorld.xz*1.3 + vec2(frameTimeCounter*WAVE_SPEED*0.08,-frameTimeCounter*WAVE_SPEED*0.04));
@@ -113,7 +115,7 @@ void main() {
         // Replace the tiny HDR disk in the sky lookup with the continuous surface
         // specular lobe below; this avoids repeated white sun disks on every wave.
         vec3 reflectedWorld = normalize(mat3(gbufferModelViewInverse)*reflected);
-        float disk = smoothstep(0.999988, 0.999991, max(dot(reflectedWorld,sunDir),0.0));
+        float disk = sunDiskMask(max(dot(reflectedWorld,sunDir),0.0));
         float daylight = smoothstep(-0.12, 0.12, sunDir.y);
         reflection = max(reflection - vec3(3.5,2.8,2.0)*disk*daylight*(1.0-rainStrength), vec3(0.0));
 #endif
@@ -160,7 +162,7 @@ void main() {
         // Broad microfacet-like sunlight plus irregular moving sparkle; keep the
         // radiance bounded instead of placing multiple hard-edged sun disks.
         float nh = max(dot(n, halfway), 0.0);
-        float roughness = 0.18;
+        float roughness = 0.15 + 0.012 * SUN_SIZE;
         float a2 = roughness * roughness;
         float denom = max(nh*nh*(a2-1.0)+1.0, 0.001);
         float lobe = min(a2/(denom*denom)*0.045, 0.85);

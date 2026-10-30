@@ -30,3 +30,4 @@ option.AUTO_EXPOSURE=Instant Auto Exposure (Experimental)
 option.WAVE_STRENGTH=Wave Strength
 option.REFLECTION_STRENGTH=Reflection Strength
 option.WAVE_SPEED=Wave Speed
+option.SUN_SIZE=Sun Size

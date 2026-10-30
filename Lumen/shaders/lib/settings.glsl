@@ -20,6 +20,7 @@
 #define VIGNETTE
 #define FILMIC
 #define GOD_RAYS
+#define SUN_SIZE 3.0 // [1.0 1.5 2.0 3.0 4.0 5.0]
 #define CUSTOM_SKY
 #define SHADOWS
 #define BLOOM
