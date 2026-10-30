@@ -1,6 +1,8 @@
 # Changelog
 
 ## In progress
+- Defined the RGBA16F GLSL constant in each program using it, fixing a deferred shader
+  compilation error. Validation no longer injects this missing definition.
 - Moved the water mask from colortex1 (which clears white) to colortex7 (which clears
   transparent black), preventing unmarked pixels from being mistaken for water.
 - Added opt-in terrain labPBR normal/smoothness/reflectance/AO sampling, procedural wet

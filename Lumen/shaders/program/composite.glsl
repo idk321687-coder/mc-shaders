@@ -3,6 +3,10 @@
 #ifdef LUMEN_OTHER_DIMENSION
 #include "/lib/dimensions.glsl"
 #endif
+// OpenGL internal format value; the shader loader does not define this GLSL token.
+#ifndef RGBA16F
+#define RGBA16F 34842
+#endif
 const int colortex0Format = RGBA16F;
 uniform sampler2D colortex0;
 uniform sampler2D colortex7;

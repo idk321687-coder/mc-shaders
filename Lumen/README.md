@@ -35,7 +35,7 @@ Shadows do not yet extend to all passes.
 ## Status and limitations
 
 The shader entry points were compiled and linked with glslang for default, LOW and experimental feature
-variants, after expanding loader includes and defining its RGBA16F format token. The pack
+variants, after expanding loader includes. The pack
 has not been run in Minecraft: loader compatibility, buffer blending, performance and
 appearance must all be verified in-game. The implementation uses GLSL 120 compatibility built-ins rather than
 the prompt's GLSL 330 core target. Compatibility with specific Iris, OptiFine or Minecraft

@@ -38,12 +38,13 @@ if cpp:
         assert result.returncode == 0, f"{path}: {result.stderr}"
         code = re.sub(r'/\*.*?\*/|//[^\n]*', '', result.stdout, flags=re.S)
         assert code.count('{') == code.count('}'), f"{path}: unmatched braces"
+        assert not re.search(r"\bRGBA16F\b", code), f"{path}: RGBA16F is undefined"
     print("Preprocessor and brace checks passed for all shader entry points.")
 else:
     print("cpp unavailable; conditional preprocessing checks skipped.")
 
-# Optional real GLSL compilation/linking. The loader injects the format token; define
-# it here solely for standalone validation. Set GLSLANG_VALIDATOR to its executable.
+# Optional real GLSL compilation/linking, using the pack source without synthetic definitions.
+# Set GLSLANG_VALIDATOR to its executable.
 import os
 import tempfile
 validator = os.environ.get("GLSLANG_VALIDATOR") or shutil.which("glslangValidator") or shutil.which("glslang")
@@ -55,7 +56,7 @@ if validator:
             for profile in ("default", "low", "experimental"):
                 stages = []
                 for path, suffix in ((vert, ".vert"), (frag, ".frag")):
-                    source = expand(path).replace("#version 120", "#version 120\n#define RGBA16F 34842", 1)
+                    source = expand(path)
                     if profile == "low":
                         for option in disabled_low:
                             source = re.sub(rf'^#define {option}\s*$', f'// #define {option}', source, flags=re.M)
