@@ -1,6 +1,10 @@
 # Changelog
 
 ## In progress
+- Reworked water normals to avoid a repeating wave grid; softened reflections, sun glints,
+  caustics, shoreline foam and refraction to reduce blown-out patches and streaks.
+- Added Wave Strength and Reflection Strength sliders; water reflection rays now skip
+  water pixels to reduce self-reflection artifacts. Visual testing in-game remains needed.
 - Defined the RGBA16F GLSL constant in each program using it, fixing a deferred shader
   compilation error. Validation no longer injects this missing definition.
 - Moved the water mask from colortex1 (which clears white) to colortex7 (which clears

@@ -27,3 +27,5 @@ option.PUDDLES=Rain Puddles
 option.LAB_PBR=LabPBR Terrain Maps (Opt-in)
 option.TONEMAP_AGX=AgX-style Tone Curve
 option.AUTO_EXPOSURE=Instant Auto Exposure (Experimental)
+option.WAVE_STRENGTH=Wave Strength
+option.REFLECTION_STRENGTH=Reflection Strength

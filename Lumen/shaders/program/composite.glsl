@@ -56,7 +56,7 @@ void main() {
         vec3 waterNormal = normalize(data.rgb * 2.0 - 1.0);
 #ifdef REFRACTION
         // Sample the opaque snapshot only when the displaced background is behind the surface.
-        vec2 refractedUV = clamp(uv + waterNormal.xy * 0.008, vec2(0.001), vec2(0.999));
+        vec2 refractedUV = clamp(uv + waterNormal.xy * 0.002, vec2(0.001), vec2(0.999));
         float refractedDepth = texture2D(depthtex1, refractedUV).r;
         if (refractedDepth > depth + 0.00001)
             scene = mix(scene, texture2D(colortex8, refractedUV).rgb, 0.35);
@@ -64,10 +64,13 @@ void main() {
 #ifdef WATER_EFFECTS
 
         float thickness = opaqueDepth < 0.999999 ? max(0.0, length(viewPos(uv,opaqueDepth))-length(viewPos(uv,depth))) : 20.0;
-        vec3 transmittance = exp(-vec3(0.12, 0.045, 0.025) * thickness);
+        vec3 transmittance = exp(-vec3(0.065, 0.027, 0.018) * thickness);
         scene = scene * transmittance + vec3(0.015,0.13,0.16) * (1.0-transmittance);
-        float foam = (1.0-smoothstep(0.08,0.55,thickness)) * (0.55+0.45*sin(uv.x*700.0+uv.y*400.0+frameTimeCounter));
-        scene += vec3(0.28,0.34,0.32) * foam;
+        // Keep foam subtle and tied to actual shallow geometry, not screen coordinates.
+        vec3 waterWorld = (gbufferModelViewInverse * vec4(viewPos(uv, depth), 1.0)).xyz + cameraPosition;
+        float foamNoise = 0.5 + 0.5*sin(dot(waterWorld.xz, vec2(1.1, 0.8)) + sin(waterWorld.z*0.7) + frameTimeCounter*0.35);
+        float foam = (1.0-smoothstep(0.05, 0.3, thickness)) * foamNoise * float(opaqueDepth < 0.999999);
+        scene += vec3(0.045,0.055,0.05) * foam;
 #ifdef CAUSTICS
         if (opaqueDepth < 0.999999) {
             vec3 bottom = (gbufferModelViewInverse * vec4(viewPos(uv,opaqueDepth),1.0)).xyz + cameraPosition;
@@ -78,7 +81,7 @@ void main() {
 #else
             caustic = 0.0;
 #endif
-            scene += vec3(0.12, 0.16, 0.12) * caustic;
+            scene += vec3(0.02, 0.026, 0.02) * caustic;
         }
 #endif
 #endif
@@ -91,6 +94,9 @@ void main() {
 #else
         vec3 reflection = skyColor(normalize(mat3(gbufferModelViewInverse)*reflected), sunDir, rainStrength, frameTimeCounter);
 #endif
+        // The procedural sun is HDR. Clamp only the sky fallback so the wave field
+        // cannot turn the sun disk into repeated blown-out white patches.
+        reflection = min(reflection, vec3(0.8));
         vec3 ray = pos + reflected * 0.15;
         for (int i = 0; i < SSR_STEPS; i++) {
             vec3 previousRay = ray;
@@ -102,7 +108,7 @@ void main() {
             float d = texture2D(depthtex0, p).r;
             vec3 hit = viewPos(p, d);
             float diff = hit.z - ray.z;
-            if (d < 0.999999 && diff > 0.0 && diff < 0.8) {
+            if (d < 0.999999 && diff > 0.0 && diff < 0.8 && texture2D(colortex7, p).a < 0.5) {
                 // Refine the segment after a depth crossing to reduce marching artifacts.
                 vec3 lo = previousRay;
                 vec3 hi = ray;
@@ -125,12 +131,12 @@ void main() {
             }
         }
         float fresnel = 0.02 + 0.98 * pow(1.0-max(dot(-normalize(pos),n),0.0),5.0);
-        scene = mix(scene, reflection, clamp(0.12 + fresnel * 0.7, 0.0, 0.8));
+        scene = mix(scene, reflection, clamp(fresnel * REFLECTION_STRENGTH, 0.0, 0.7));
 #ifndef LUMEN_OTHER_DIMENSION
         vec3 sunView = normalize(sunPosition);
         vec3 halfway = normalize(sunView - normalize(pos));
-        float glint = pow(max(dot(n, halfway), 0.0), 128.0);
-        scene += vec3(1.1,0.85,0.55) * glint * smoothstep(0.0,0.15,sunDir.y) * (1.0-rainStrength) * shadowAtViewPosition(pos);
+        float glint = pow(max(dot(n, halfway), 0.0), 64.0);
+        scene += vec3(0.035,0.03,0.02) * glint * smoothstep(0.0,0.15,sunDir.y) * (1.0-rainStrength) * shadowAtViewPosition(pos);
 #endif
 #endif
     }
