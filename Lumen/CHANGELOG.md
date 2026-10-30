@@ -1,6 +1,11 @@
 # Changelog
 
 ## In progress
+- Rebuilt water with animated multi-scale, domain-warped wave normals, stronger SSR and
+  sky reflections, depth-scaled refraction, a continuous sun-specular lobe, and richer
+  world-space shoreline foam and caustics. Added water-effects-off compilation coverage.
+- Removed the direct reflected HDR sun disk that could repeat as blown-out blobs.
+  These changes compile but have not been visually validated in Minecraft.
 - Reworked water normals to avoid a repeating wave grid; softened reflections, sun glints,
   caustics, shoreline foam and refraction to reduce blown-out patches and streaks.
 - Added Wave Strength and Reflection Strength sliders; water reflection rays now skip

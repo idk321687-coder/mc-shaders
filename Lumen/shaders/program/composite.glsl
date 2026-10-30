@@ -1,5 +1,6 @@
 #include "/lib/settings.glsl"
 #include "/lib/sky.glsl"
+#include "/lib/water.glsl"
 #ifdef LUMEN_OTHER_DIMENSION
 #include "/lib/dimensions.glsl"
 #endif
@@ -17,6 +18,7 @@ uniform sampler2D shadowtex0;
 uniform mat4 shadowProjection;
 uniform mat4 shadowModelView;
 uniform int isEyeInWater;
+uniform mat4 gbufferModelView;
 uniform mat4 gbufferProjection;
 uniform mat4 gbufferProjectionInverse;
 uniform mat4 gbufferModelViewInverse;
@@ -53,40 +55,44 @@ void main() {
     vec4 data = texture2D(colortex7, uv);
     if (data.a > 0.9 && depth < 0.999999) {
         float opaqueDepth = texture2D(depthtex1, uv).r;
+        vec3 pos = viewPos(uv, depth);
+        vec3 waterWorld = (gbufferModelViewInverse * vec4(pos, 1.0)).xyz + cameraPosition;
         vec3 waterNormal = normalize(data.rgb * 2.0 - 1.0);
+        float thickness = opaqueDepth < 0.999999 ? max(0.0, length(viewPos(uv,opaqueDepth))-length(pos)) : 20.0;
 #ifdef REFRACTION
         // Sample the opaque snapshot only when the displaced background is behind the surface.
-        vec2 refractedUV = clamp(uv + waterNormal.xy * 0.002, vec2(0.001), vec2(0.999));
+        vec3 flatNormal = normalize(mat3(gbufferModelView) * vec3(0.0, 1.0, 0.0));
+        vec2 waveOffset = waterNormal.xy - flatNormal.xy;
+        vec2 refractedUV = clamp(uv + waveOffset * 0.035 * smoothstep(0.0,2.0,thickness), vec2(0.001), vec2(0.999));
         float refractedDepth = texture2D(depthtex1, refractedUV).r;
         if (refractedDepth > depth + 0.00001)
-            scene = mix(scene, texture2D(colortex8, refractedUV).rgb, 0.35);
+            scene = mix(scene, texture2D(colortex8, refractedUV).rgb, 0.55);
 #endif
 #ifdef WATER_EFFECTS
 
-        float thickness = opaqueDepth < 0.999999 ? max(0.0, length(viewPos(uv,opaqueDepth))-length(viewPos(uv,depth))) : 20.0;
         vec3 transmittance = exp(-vec3(0.065, 0.027, 0.018) * thickness);
         scene = scene * transmittance + vec3(0.015,0.13,0.16) * (1.0-transmittance);
-        // Keep foam subtle and tied to actual shallow geometry, not screen coordinates.
-        vec3 waterWorld = (gbufferModelViewInverse * vec4(viewPos(uv, depth), 1.0)).xyz + cameraPosition;
-        float foamNoise = 0.5 + 0.5*sin(dot(waterWorld.xz, vec2(1.1, 0.8)) + sin(waterWorld.z*0.7) + frameTimeCounter*0.35);
-        float foam = (1.0-smoothstep(0.05, 0.3, thickness)) * foamNoise * float(opaqueDepth < 0.999999);
-        scene += vec3(0.045,0.055,0.05) * foam;
+        // Broken, animated foam follows world-space shoreline intersections.
+        float foamNoise = waterNoise(waterWorld.xz*1.3 + vec2(frameTimeCounter*0.08,-frameTimeCounter*0.04));
+        float foam = (1.0-smoothstep(0.08, 0.65, thickness)) * smoothstep(0.35,0.75,foamNoise) * float(opaqueDepth < 0.999999);
+        scene = mix(scene, vec3(0.62,0.72,0.68), foam*0.25);
 #ifdef CAUSTICS
         if (opaqueDepth < 0.999999) {
             vec3 bottom = (gbufferModelViewInverse * vec4(viewPos(uv,opaqueDepth),1.0)).xyz + cameraPosition;
-            float pattern = abs(sin(bottom.x * 1.8 + frameTimeCounter * 0.8) + sin(bottom.z * 1.6 - frameTimeCounter * 0.65));
-            float caustic = pow(max(0.0, 1.0 - pattern), 7.0) * exp(-thickness * 0.2);
+            vec2 drift = vec2(frameTimeCounter*0.11, -frameTimeCounter*0.08);
+            float c1 = waterNoise(bottom.xz*0.9 + drift);
+            float c2 = waterNoise(bottom.xz*1.35 - drift + 4.7);
+            float caustic = pow(max(0.0,1.0-abs(c1-c2)*4.0), 5.0) * exp(-thickness * 0.16);
 #ifndef LUMEN_OTHER_DIMENSION
             caustic *= smoothstep(0.0, 0.2, sunDir.y) * (1.0-rainStrength) * shadowAtViewPosition(viewPos(uv, opaqueDepth));
 #else
             caustic = 0.0;
 #endif
-            scene += vec3(0.02, 0.026, 0.02) * caustic;
+            scene += vec3(0.12, 0.16, 0.12) * caustic;
         }
 #endif
 #endif
 #ifdef WATER_REFLECTIONS
-        vec3 pos = viewPos(uv, depth);
         vec3 n = waterNormal;
         vec3 reflected = normalize(reflect(normalize(pos), n));
         #ifdef LUMEN_OTHER_DIMENSION
@@ -94,9 +100,14 @@ void main() {
 #else
         vec3 reflection = skyColor(normalize(mat3(gbufferModelViewInverse)*reflected), sunDir, rainStrength, frameTimeCounter);
 #endif
-        // The procedural sun is HDR. Clamp only the sky fallback so the wave field
-        // cannot turn the sun disk into repeated blown-out white patches.
-        reflection = min(reflection, vec3(0.8));
+#ifndef LUMEN_OTHER_DIMENSION
+        // Replace the tiny HDR disk in the sky lookup with the continuous surface
+        // specular lobe below; this avoids repeated white sun disks on every wave.
+        vec3 reflectedWorld = normalize(mat3(gbufferModelViewInverse)*reflected);
+        float disk = smoothstep(0.999988, 0.999991, max(dot(reflectedWorld,sunDir),0.0));
+        float daylight = smoothstep(-0.12, 0.12, sunDir.y);
+        reflection = max(reflection - vec3(3.5,2.8,2.0)*disk*daylight*(1.0-rainStrength), vec3(0.0));
+#endif
         vec3 ray = pos + reflected * 0.15;
         for (int i = 0; i < SSR_STEPS; i++) {
             vec3 previousRay = ray;
@@ -130,13 +141,23 @@ void main() {
                 break;
             }
         }
-        float fresnel = 0.02 + 0.98 * pow(1.0-max(dot(-normalize(pos),n),0.0),5.0);
-        scene = mix(scene, reflection, clamp(fresnel * REFLECTION_STRENGTH, 0.0, 0.7));
+        float grazing = pow(1.0-max(dot(-normalize(pos),n),0.0),5.0);
+        // An artistic base reflection keeps water visibly reflective from above.
+        float reflectionWeight = mix(0.12, 0.82, grazing) * REFLECTION_STRENGTH;
+        scene = mix(scene, reflection, clamp(reflectionWeight, 0.0, 0.85));
 #ifndef LUMEN_OTHER_DIMENSION
         vec3 sunView = normalize(sunPosition);
         vec3 halfway = normalize(sunView - normalize(pos));
-        float glint = pow(max(dot(n, halfway), 0.0), 64.0);
-        scene += vec3(0.035,0.03,0.02) * glint * smoothstep(0.0,0.15,sunDir.y) * (1.0-rainStrength) * shadowAtViewPosition(pos);
+        // Broad microfacet-like sunlight plus irregular moving sparkle; keep the
+        // radiance bounded instead of placing multiple hard-edged sun disks.
+        float nh = max(dot(n, halfway), 0.0);
+        float roughness = 0.18;
+        float a2 = roughness * roughness;
+        float denom = max(nh*nh*(a2-1.0)+1.0, 0.001);
+        float lobe = min(a2/(denom*denom)*0.045, 0.85);
+        float sparkle = waterNoise(waterWorld.xz*1.7 + vec2(frameTimeCounter*0.19,-frameTimeCounter*0.14));
+        float sunVisibility = smoothstep(0.0,0.15,sunDir.y) * (1.0-rainStrength) * shadowAtViewPosition(pos);
+        scene += vec3(1.0,0.82,0.58) * lobe * mix(0.55,1.0,sparkle) * sunVisibility;
 #endif
 #endif
     }

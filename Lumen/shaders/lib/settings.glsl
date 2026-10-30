@@ -3,8 +3,8 @@
 #define WIND_STRENGTH 1.0 // [0.0 0.5 1.0 1.5 2.0]
 #define WIND_SPEED 1.0 // [0.5 0.75 1.0 1.5 2.0]
 #define WATER_REFLECTIONS
-#define WAVE_STRENGTH 0.6 // [0.0 0.3 0.6 1.0 1.5]
-#define REFLECTION_STRENGTH 0.7 // [0.0 0.3 0.5 0.7 1.0]
+#define WAVE_STRENGTH 1.0 // [0.0 0.3 0.6 1.0 1.5]
+#define REFLECTION_STRENGTH 1.0 // [0.0 0.3 0.5 0.7 1.0]
 #define WATER_EFFECTS
 #define REFRACTION
 #define CAUSTICS

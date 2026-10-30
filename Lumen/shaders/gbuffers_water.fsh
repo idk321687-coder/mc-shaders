@@ -1,5 +1,6 @@
 #version 120
 #include "/lib/settings.glsl"
+#include "/lib/water.glsl"
 uniform sampler2D texture;
 uniform sampler2D lightmap;
 uniform float frameTimeCounter;
@@ -16,18 +17,17 @@ varying vec3 worldpos;
 void main() {
     vec4 albedo = texture2D(texture, texcoord) * color;
     if (albedo.a < 0.01) discard;
-    // Low-amplitude, differently oriented waves avoid a repeating grid of bright spots.
+    // Different scales move together in world space; height derivatives make
+    // the highlights follow the same surface rather than a repeating grid.
     vec2 p = worldpos.xz;
     float t = frameTimeCounter;
-    float a = dot(p, vec2(0.31, 0.18)) + t * 0.40;
-    float b = dot(p, vec2(-0.21, 0.37)) - t * 0.31;
-    float c = dot(p, vec2(0.49, -0.34)) + t * 0.53;
-    vec2 wave = vec2(0.31,0.18)*cos(a)*0.055
-              + vec2(-0.21,0.37)*cos(b)*0.035
-              + vec2(0.49,-0.34)*cos(c)*0.012;
+    float h = waterHeight(p, t);
+    float epsilon = 0.08;
+    vec2 wave = vec2(waterHeight(p+vec2(epsilon,0.0),t)-h,
+                     waterHeight(p+vec2(0.0,epsilon),t)-h) / epsilon;
     vec3 worldNormal = normalize(mat3(gbufferModelViewInverse) * normal);
     float topSurface = smoothstep(0.4, 0.9, worldNormal.y);
-    float distanceFade = 1.0 - smoothstep(30.0, 120.0, length(worldpos-cameraPosition));
+    float distanceFade = mix(1.0, 0.5, smoothstep(70.0, 180.0, length(worldpos-cameraPosition)));
     wave *= WAVE_STRENGTH * isWater * topSurface * distanceFade;
     vec3 n = normalize(normal + mat3(gbufferModelView) * vec3(wave.x, 0.0, wave.y));
     gl_FragData[0] = albedo * texture2D(lightmap, lightcoord);
