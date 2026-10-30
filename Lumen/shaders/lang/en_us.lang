@@ -29,3 +29,4 @@ option.TONEMAP_AGX=AgX-style Tone Curve
 option.AUTO_EXPOSURE=Instant Auto Exposure (Experimental)
 option.WAVE_STRENGTH=Wave Strength
 option.REFLECTION_STRENGTH=Reflection Strength
+option.WAVE_SPEED=Wave Speed

@@ -72,14 +72,23 @@ void main() {
 
         vec3 transmittance = exp(-vec3(0.065, 0.027, 0.018) * thickness);
         scene = scene * transmittance + vec3(0.015,0.13,0.16) * (1.0-transmittance);
+        // Surface shading is visible even when looking straight down, where Fresnel
+        // reflections are naturally weak. It uses the exact same animated wave field
+        // as the normal map, and scales with scene color so it does not glow at night.
+        vec3 flatUp = normalize(mat3(gbufferModelView) * vec3(0.0,1.0,0.0));
+        float upward = smoothstep(0.35, 0.8, dot(waterNormal, flatUp));
+        float topDown = smoothstep(0.15, 0.9, abs(dot(normalize(pos), flatUp)));
+        float crest = clamp((waterHeight(waterWorld.xz, frameTimeCounter) - 0.08)*2.4, -0.6, 0.6);
+        float detail = clamp(WAVE_STRENGTH, 0.0, 1.5) * upward * mix(0.20, 0.60, topDown);
+        scene *= max(0.0, 1.0 + crest * detail);
         // Broken, animated foam follows world-space shoreline intersections.
-        float foamNoise = waterNoise(waterWorld.xz*1.3 + vec2(frameTimeCounter*0.08,-frameTimeCounter*0.04));
+        float foamNoise = waterNoise(waterWorld.xz*1.3 + vec2(frameTimeCounter*WAVE_SPEED*0.08,-frameTimeCounter*WAVE_SPEED*0.04));
         float foam = (1.0-smoothstep(0.08, 0.65, thickness)) * smoothstep(0.35,0.75,foamNoise) * float(opaqueDepth < 0.999999);
         scene = mix(scene, vec3(0.62,0.72,0.68), foam*0.25);
 #ifdef CAUSTICS
         if (opaqueDepth < 0.999999) {
             vec3 bottom = (gbufferModelViewInverse * vec4(viewPos(uv,opaqueDepth),1.0)).xyz + cameraPosition;
-            vec2 drift = vec2(frameTimeCounter*0.11, -frameTimeCounter*0.08);
+            vec2 drift = vec2(frameTimeCounter*WAVE_SPEED*0.11, -frameTimeCounter*WAVE_SPEED*0.08);
             float c1 = waterNoise(bottom.xz*0.9 + drift);
             float c2 = waterNoise(bottom.xz*1.35 - drift + 4.7);
             float caustic = pow(max(0.0,1.0-abs(c1-c2)*4.0), 5.0) * exp(-thickness * 0.16);
@@ -143,7 +152,7 @@ void main() {
         }
         float grazing = pow(1.0-max(dot(-normalize(pos),n),0.0),5.0);
         // An artistic base reflection keeps water visibly reflective from above.
-        float reflectionWeight = mix(0.12, 0.82, grazing) * REFLECTION_STRENGTH;
+        float reflectionWeight = mix(0.20, 0.82, grazing) * REFLECTION_STRENGTH;
         scene = mix(scene, reflection, clamp(reflectionWeight, 0.0, 0.85));
 #ifndef LUMEN_OTHER_DIMENSION
         vec3 sunView = normalize(sunPosition);
@@ -155,7 +164,7 @@ void main() {
         float a2 = roughness * roughness;
         float denom = max(nh*nh*(a2-1.0)+1.0, 0.001);
         float lobe = min(a2/(denom*denom)*0.045, 0.85);
-        float sparkle = waterNoise(waterWorld.xz*1.7 + vec2(frameTimeCounter*0.19,-frameTimeCounter*0.14));
+        float sparkle = waterNoise(waterWorld.xz*1.7 + vec2(frameTimeCounter*WAVE_SPEED*0.19,-frameTimeCounter*WAVE_SPEED*0.14));
         float sunVisibility = smoothstep(0.0,0.15,sunDir.y) * (1.0-rainStrength) * shadowAtViewPosition(pos);
         scene += vec3(1.0,0.82,0.58) * lobe * mix(0.55,1.0,sparkle) * sunVisibility;
 #endif

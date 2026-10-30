@@ -11,6 +11,7 @@ float waterNoise(vec2 p) {
 }
 // Smooth, moving multi-scale surface; gradients of this height shape the normal.
 float waterHeight(vec2 p, float t) {
+    t *= WAVE_SPEED;
     vec2 warp = vec2(waterNoise(p*0.13+vec2(t*0.025,0.0)),
                      waterNoise(p*0.13+vec2(7.1,-t*0.021))) - 0.5;
     p += warp * 1.6;

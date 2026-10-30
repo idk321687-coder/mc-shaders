@@ -10,7 +10,7 @@ production-tested pack** in `../SHADER_PROMPT.md`.
    contents so `shaders/` is at the root of the zip.
 3. Select Lumen in Video Settings → Shaders. Shader options include LOW, MEDIUM,
    HIGH and ULTRA profiles plus atmosphere, water, wind and color controls.
-   Under Water, use Wave Strength and Reflection Strength to adjust the surface. If you
+   Under Water, use Wave Strength, Wave Speed and Reflection Strength to adjust the surface. If you
    upgraded from an older Lumen ZIP, reset shader options to use the new defaults.
 
 ## Implemented so far

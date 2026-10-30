@@ -28,7 +28,7 @@ void main() {
     vec3 worldNormal = normalize(mat3(gbufferModelViewInverse) * normal);
     float topSurface = smoothstep(0.4, 0.9, worldNormal.y);
     float distanceFade = mix(1.0, 0.5, smoothstep(70.0, 180.0, length(worldpos-cameraPosition)));
-    wave *= WAVE_STRENGTH * isWater * topSurface * distanceFade;
+    wave *= 1.35 * WAVE_STRENGTH * isWater * topSurface * distanceFade;
     vec3 n = normalize(normal + mat3(gbufferModelView) * vec3(wave.x, 0.0, wave.y));
     gl_FragData[0] = albedo * texture2D(lightmap, lightcoord);
     gl_FragData[1] = vec4(n * 0.5 + 0.5, isWater);

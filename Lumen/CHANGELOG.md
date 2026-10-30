@@ -1,6 +1,9 @@
 # Changelog
 
 ## In progress
+- Added animated, world-space surface shading for top-down water views and increased wave
+  normal strength so motion is visible beyond reflections. Added a Wave Speed slider and
+  increased the baseline reflection strength. In-game visual validation remains needed.
 - Rebuilt water with animated multi-scale, domain-warped wave normals, stronger SSR and
   sky reflections, depth-scaled refraction, a continuous sun-specular lobe, and richer
   world-space shoreline foam and caustics. Added water-effects-off compilation coverage.
